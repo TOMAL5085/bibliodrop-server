@@ -183,6 +183,17 @@ function createApp() {
     });
   });
 
+  app.post("/api/auth/logout", (_req, res) => {
+    res.clearCookie("bibliodrop_token", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    });
+
+    return res.json({ ok: true });
+  });
+
   app.get("/api/me", (req, res) => {
     const token = req.cookies.bibliodrop_token;
 
