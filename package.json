@@ -1,9 +1,11 @@
 {
   "name": "bibliodrop-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "Express API scaffold for BiblioDrop",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
