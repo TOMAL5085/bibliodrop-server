@@ -2,7 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
-const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const {
   books,
   users,
@@ -102,28 +103,63 @@ function createApp() {
   });
 
   app.post("/api/auth/login", (req, res) => {
-    const { email } = req.body;
+    const { email, password } = req.body;
     const user = users.find((item) => item.email === email);
 
-    if (!user) {
+    if (!user || !password) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = crypto.createHash("sha256").update(`${user.email}:${Date.now()}`).digest("hex");
+    const validPassword = bcrypt.compareSync(password, user.passwordHash);
+
+    if (!validPassword) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+      },
+      process.env.JWT_SECRET || "bibliodrop-dev-secret",
+      {
+        expiresIn: "7d",
+      }
+    );
+
     res.cookie("bibliodrop_token", token, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
     });
-    return res.json({ user, token });
+    return res.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        photoUrl: user.photoUrl ?? "",
+      },
+      token,
+    });
   });
 
   app.post("/api/auth/register", (req, res) => {
-    const { name, email, role = "user" } = req.body;
+    const { name, email, password, confirmPassword, photoUrl = "", role = "user" } = req.body;
     const exists = users.some((item) => item.email === email);
 
     if (exists) {
       return res.status(409).json({ message: "Email already exists" });
+    }
+
+    if (!name || !email || !password || !confirmPassword) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
     }
 
     const user = {
@@ -131,15 +167,49 @@ function createApp() {
       name,
       email,
       role,
+      photoUrl,
+      passwordHash: bcrypt.hashSync(password, 10),
     };
 
     users.push(user);
-    return res.status(201).json({ user });
+    return res.status(201).json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        photoUrl: user.photoUrl,
+      },
+    });
   });
 
   app.get("/api/me", (req, res) => {
-    const user = users[0];
-    res.json({ user });
+    const token = req.cookies.bibliodrop_token;
+
+    if (!token) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const payload = jwt.verify(token, process.env.JWT_SECRET || "bibliodrop-dev-secret");
+      const user = users.find((item) => item.id === payload.sub);
+
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      return res.json({
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          photoUrl: user.photoUrl ?? "",
+        },
+      });
+    } catch {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
   });
 
   app.get("/api/deliveries", (_req, res) => {

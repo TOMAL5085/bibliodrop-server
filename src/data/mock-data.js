@@ -1,3 +1,5 @@
+const bcrypt = require("bcryptjs");
+
 const books = [
   {
     id: "atlas-of-light",
@@ -35,9 +37,30 @@ const books = [
 ];
 
 const users = [
-  { id: "u1", name: "Rahim Ahmed", email: "rahim@example.com", role: "user" },
-  { id: "u2", name: "Ayesha Rahman", email: "ayesha@example.com", role: "librarian" },
-  { id: "u3", name: "Admin", email: "admin@gmail.com", role: "admin" },
+  {
+    id: "u1",
+    name: "Rahim Ahmed",
+    email: "rahim@example.com",
+    role: "user",
+    photoUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&h=256&fit=crop",
+    passwordHash: bcrypt.hashSync("Password@123", 10),
+  },
+  {
+    id: "u2",
+    name: "Ayesha Rahman",
+    email: "ayesha@example.com",
+    role: "librarian",
+    photoUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=256&h=256&fit=crop",
+    passwordHash: bcrypt.hashSync("Password@123", 10),
+  },
+  {
+    id: "u3",
+    name: "Admin",
+    email: "admin@gmail.com",
+    role: "admin",
+    photoUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=256&h=256&fit=crop",
+    passwordHash: bcrypt.hashSync("Admin@123", 10),
+  },
 ];
 
 const deliveries = [
