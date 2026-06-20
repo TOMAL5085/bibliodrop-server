@@ -106,6 +106,10 @@ function createApp() {
   app.use(cookieParser());
   app.use(morgan("dev"));
 
+  app.get("/", (_req, res) => {
+    res.json({ ok: true, service: "bibliodrop-server" });
+  });
+
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, service: "bibliodrop-api" });
   });
