@@ -26,6 +26,10 @@ function authSecret() {
   return process.env.BETTER_AUTH_SECRET || process.env.JWT_SECRET || "bibliodrop-dev-secret";
 }
 
+function authBaseUrl() {
+  return process.env.BETTER_AUTH_URL?.trim() || "";
+}
+
 function base64UrlEncode(input) {
   return Buffer.from(input).toString("base64url");
 }
@@ -265,10 +269,11 @@ async function buildGoogleAuthUrl({ origin, callbackURL }) {
     return null;
   }
 
+  const baseUrl = authBaseUrl() || origin;
   const state = signOAuthState({ callbackURL });
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: `${origin}/api/auth/google/callback`,
+    redirect_uri: `${baseUrl}/api/auth/google/callback`,
     response_type: "code",
     scope: "openid email profile",
     state,
@@ -324,6 +329,7 @@ async function fetchGoogleProfile(accessToken) {
 module.exports = {
   authCookieOptions,
   buildGoogleAuthUrl,
+  authBaseUrl,
   createUser,
   exchangeGoogleCode,
   fetchGoogleProfile,

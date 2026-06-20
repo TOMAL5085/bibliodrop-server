@@ -11,6 +11,7 @@ const {
 } = require("./data/mock-data");
 const {
   authCookieOptions,
+  authBaseUrl,
   buildGoogleAuthUrl,
   countUsers,
   createUser,
@@ -268,9 +269,10 @@ function createApp() {
     }
 
     const origin = getRequestOrigin(req);
+    const baseUrl = authBaseUrl() || origin;
     const tokenResponse = await exchangeGoogleCode({
       code,
-      redirectURI: `${origin}/api/auth/google/callback`,
+      redirectURI: `${baseUrl}/api/auth/google/callback`,
     });
 
     if (!tokenResponse?.access_token) {
