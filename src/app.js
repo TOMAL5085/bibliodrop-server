@@ -2,23 +2,103 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const multer = require("multer");
 const {
   books,
-  users,
   deliveries,
   reviews,
   transactions,
 } = require("./data/mock-data");
+const {
+  authCookieOptions,
+  buildGoogleAuthUrl,
+  countUsers,
+  createUser,
+  exchangeGoogleCode,
+  fetchGoogleProfile,
+  findUserByEmail,
+  findUserById,
+  hashPassword,
+  sanitizeUser,
+  signAuthToken,
+  upsertGoogleUser,
+  verifyAuthToken,
+  verifyOAuthState,
+  verifyPassword,
+} = require("./lib/auth");
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+function getRequestOrigin(req) {
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+  const forwardedHost = String(req.headers["x-forwarded-host"] || "").split(",")[0].trim();
+  const proto = forwardedProto || req.protocol || "https";
+  const host = forwardedHost || req.get("host");
+  return `${proto}://${host}`;
+}
+
+function setAuthCookie(res, token) {
+  res.cookie("bibliodrop_token", token, authCookieOptions());
+}
+
+function clearAuthCookie(res) {
+  res.clearCookie("bibliodrop_token", {
+    ...authCookieOptions(),
+    maxAge: undefined,
+  });
+}
+
+async function resolveCurrentUser(req) {
+  const bearerToken = String(req.headers.authorization || "").startsWith("Bearer ")
+    ? String(req.headers.authorization || "").slice(7).trim()
+    : "";
+  const token = bearerToken || req.cookies.bibliodrop_token;
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const payload = verifyAuthToken(token);
+    if (!payload?.sub) {
+      return null;
+    }
+
+    return await findUserById(payload.sub);
+  } catch {
+    return null;
+  }
+}
 
 function createApp() {
   const app = express();
-  const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:3000";
+  const allowedOrigins = [
+    process.env.CLIENT_ORIGIN || "http://localhost:3000",
+    "http://127.0.0.1:3000",
+  ]
+    .flatMap((value) => String(value).split(","))
+    .map((value) => value.trim())
+    .filter(Boolean);
 
   app.use(
     cors({
-      origin: clientOrigin,
+      origin(origin, callback) {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        if (
+          allowedOrigins.includes(origin) ||
+          origin.endsWith(".vercel.app") ||
+          origin.startsWith("http://localhost:") ||
+          origin.startsWith("https://localhost:")
+        ) {
+          callback(null, true);
+          return;
+        }
+
+        callback(null, false);
+      },
       credentials: true,
     })
   );
@@ -68,7 +148,7 @@ function createApp() {
     return res.json({ data: book, reviews: reviews.filter((review) => review.bookId === book.id) });
   });
 
-  app.get("/api/dashboard/:role", (req, res) => {
+  app.get("/api/dashboard/:role", async (req, res) => {
     const { role } = req.params;
 
     const response = {
@@ -88,7 +168,7 @@ function createApp() {
       },
       admin: {
         stats: [
-          { label: "Total users", value: users.length },
+          { label: "Total users", value: await countUsers() },
           { label: "Total books", value: books.length },
           { label: "Total revenue", value: 86400 },
         ],
@@ -102,57 +182,30 @@ function createApp() {
     return res.json({ data: response[role] });
   });
 
-  app.post("/api/auth/login", (req, res) => {
-    const { email, password } = req.body;
-    const user = users.find((item) => item.email === email);
+  app.post("/api/auth/login", async (req, res) => {
+    const { email, password } = req.body || {};
 
-    if (!user || !password) {
+    if (!email || !password) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const user = await findUserByEmail(email);
+
+    if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const validPassword = bcrypt.compareSync(password, user.passwordHash);
+    const token = signAuthToken(user);
+    setAuthCookie(res, token);
 
-    if (!validPassword) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const token = jwt.sign(
-      {
-        sub: user.id,
-        email: user.email,
-        role: user.role,
-        name: user.name,
-      },
-      process.env.JWT_SECRET || "bibliodrop-dev-secret",
-      {
-        expiresIn: "7d",
-      }
-    );
-
-    res.cookie("bibliodrop_token", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-    });
     return res.json({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        photoUrl: user.photoUrl ?? "",
-      },
+      user: sanitizeUser(user),
       token,
     });
   });
 
-  app.post("/api/auth/register", (req, res) => {
-    const { name, email, password, confirmPassword, photoUrl = "", role = "user" } = req.body;
-    const exists = users.some((item) => item.email === email);
-
-    if (exists) {
-      return res.status(409).json({ message: "Email already exists" });
-    }
+  app.post("/api/auth/register", async (req, res) => {
+    const { name, email, password, confirmPassword, photoUrl = "", role = "user" } = req.body || {};
 
     if (!name || !email || !password || !confirmPassword) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -162,65 +215,138 @@ function createApp() {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    const user = {
-      id: `u${users.length + 1}`,
+    const exists = await findUserByEmail(email);
+    if (exists) {
+      return res.status(409).json({ message: "Email already exists" });
+    }
+
+    const safeRole = role === "librarian" ? "librarian" : "user";
+    const user = await createUser({
       name,
       email,
-      role,
+      role: safeRole,
       photoUrl,
-      passwordHash: bcrypt.hashSync(password, 10),
-    };
+      passwordHash: hashPassword(password),
+    });
 
-    users.push(user);
+    const token = signAuthToken(user);
+    setAuthCookie(res, token);
+
     return res.status(201).json({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        photoUrl: user.photoUrl,
-      },
+      user: sanitizeUser(user),
+      token,
     });
   });
 
-  app.post("/api/auth/logout", (_req, res) => {
-    res.clearCookie("bibliodrop_token", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
+  app.post("/api/auth/google/start", async (req, res) => {
+    const { callbackURL = "/dashboard" } = req.body || {};
+    const origin = getRequestOrigin(req);
+    const url = await buildGoogleAuthUrl({ origin, callbackURL });
+
+    if (!url) {
+      return res.status(500).json({ message: "Google sign-in is not configured" });
+    }
+
+    return res.json({ url, redirect: false });
+  });
+
+  app.get("/api/auth/google/callback", async (req, res) => {
+    const { code, state } = req.query;
+    const clientOrigin = process.env.CLIENT_ORIGIN?.trim();
+
+    if (typeof code !== "string" || typeof state !== "string") {
+      return res.status(400).send("Missing OAuth parameters");
+    }
+
+    const payload = verifyOAuthState(state);
+    if (!payload?.callbackURL) {
+      return res.status(400).send("Invalid OAuth state");
+    }
+
+    const origin = getRequestOrigin(req);
+    const tokenResponse = await exchangeGoogleCode({
+      code,
+      redirectURI: `${origin}/api/auth/google/callback`,
     });
+
+    if (!tokenResponse?.access_token) {
+      return res.status(401).send("Google sign-in failed");
+    }
+
+    const profile = await fetchGoogleProfile(tokenResponse.access_token);
+    if (!profile?.email) {
+      return res.status(401).send("Google profile not available");
+    }
+
+    const user = await upsertGoogleUser({
+      email: profile.email,
+      name: profile.name || profile.email.split("@")[0],
+      photoUrl: profile.picture || "",
+    });
+
+    const token = signAuthToken(user);
+    setAuthCookie(res, token);
+
+    const callbackURL = String(payload.callbackURL || "/dashboard");
+    if (callbackURL.startsWith("http") && clientOrigin && !callbackURL.startsWith(clientOrigin)) {
+      return res.status(400).send("Invalid callback URL");
+    }
+
+    const redirectURL = callbackURL.startsWith("http")
+      ? callbackURL
+      : new URL(callbackURL, clientOrigin || origin).toString();
+
+    return res.redirect(302, redirectURL);
+  });
+
+  app.post("/api/auth/logout", (_req, res) => {
+    clearAuthCookie(res);
 
     return res.json({ ok: true });
   });
 
-  app.get("/api/me", (req, res) => {
-    const token = req.cookies.bibliodrop_token;
+  app.get("/api/me", async (req, res) => {
+    const user = await resolveCurrentUser(req);
 
-    if (!token) {
+    if (!user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET || "bibliodrop-dev-secret");
-      const user = users.find((item) => item.id === payload.sub);
+    return res.json({ user: sanitizeUser(user) });
+  });
 
-      if (!user) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
+  app.post("/api/uploads/image", upload.single("file"), async (req, res) => {
+    const file = req.file;
 
-      return res.json({
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          photoUrl: user.photoUrl ?? "",
-        },
-      });
-    } catch {
-      return res.status(401).json({ message: "Not authenticated" });
+    if (!file) {
+      return res.status(400).json({ message: "No file provided" });
     }
+
+    const apiKey = process.env.IMGBB_API_KEY?.trim();
+    if (!apiKey) {
+      return res.status(500).json({ message: "IMGBB_API_KEY is missing" });
+    }
+
+    const uploadData = new FormData();
+    uploadData.append("image", file.buffer.toString("base64"));
+
+    const uploadResponse = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      method: "POST",
+      body: uploadData,
+    });
+
+    if (!uploadResponse.ok) {
+      return res.status(502).json({ message: "Image upload failed" });
+    }
+
+    const payload = await uploadResponse.json();
+    const url = payload?.data?.url;
+
+    if (!url) {
+      return res.status(502).json({ message: "Image upload failed" });
+    }
+
+    return res.json({ url });
   });
 
   app.get("/api/deliveries", (_req, res) => {
