@@ -115,7 +115,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Rafiq Hasan",
-    providerPhoto: "https://images.unsplash.com/photo-1508341591423-4347099e1f19?w=256&h=256&fit=crop",
+    providerPhoto: "/download.png",
     providerEmail: "rafiq@example.com",
   },
   {
@@ -128,7 +128,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Rafiq Hasan",
-    providerPhoto: "https://images.unsplash.com/photo-1508341591423-4347099e1f19?w=256&h=256&fit=crop",
+    providerPhoto: "/download.png",
     providerEmail: "rafiq@example.com",
   },
   {
@@ -205,7 +205,7 @@ const users = [
     name: "Rafiq Hasan",
     email: "rafiq@example.com",
     role: "librarian",
-    photoUrl: "https://images.unsplash.com/photo-1508341591423-4347099e1f19?w=256&h=256&fit=crop",
+    photoUrl: "/download.png",
     passwordHash: bcrypt.hashSync("Password@123", 10),
   },
   {
