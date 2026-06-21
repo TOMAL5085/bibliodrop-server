@@ -11,6 +11,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Ayesha Rahman",
+    providerPhoto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=256&h=256&fit=crop",
     providerEmail: "ayesha@example.com",
   },
   {
@@ -23,6 +24,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Ayesha Rahman",
+    providerPhoto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=256&h=256&fit=crop",
     providerEmail: "ayesha@example.com",
   },
   {
@@ -35,6 +37,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Nayeem Khan",
+    providerPhoto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&h=256&fit=crop",
     providerEmail: "nayeem@example.com",
   },
   {
@@ -47,6 +50,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Nayeem Khan",
+    providerPhoto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&h=256&fit=crop",
     providerEmail: "nayeem@example.com",
   },
   {
@@ -59,6 +63,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Nusrat Jahan",
+    providerPhoto: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=256&h=256&fit=crop",
     providerEmail: "nusrat@example.com",
   },
   {
@@ -71,6 +76,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Nusrat Jahan",
+    providerPhoto: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=256&h=256&fit=crop",
     providerEmail: "nusrat@example.com",
   },
   {
@@ -83,6 +89,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Tanvir Islam",
+    providerPhoto: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=256&h=256&fit=crop",
     providerEmail: "tanvir@example.com",
   },
   {
@@ -95,6 +102,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Tanvir Islam",
+    providerPhoto: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=256&h=256&fit=crop",
     providerEmail: "tanvir@example.com",
   },
   {
@@ -107,6 +115,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Rafiq Hasan",
+    providerPhoto: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=256&h=256&fit=crop",
     providerEmail: "rafiq@example.com",
   },
   {
@@ -119,6 +128,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Rafiq Hasan",
+    providerPhoto: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=256&h=256&fit=crop",
     providerEmail: "rafiq@example.com",
   },
   {
@@ -131,6 +141,7 @@ const books = [
     status: "published",
     availability: "Checked Out",
     provider: "Farida Akter",
+    providerPhoto: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=256&h=256&fit=crop",
     providerEmail: "farida@example.com",
   },
   {
@@ -143,6 +154,7 @@ const books = [
     status: "published",
     availability: "Available",
     provider: "Farida Akter",
+    providerPhoto: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=256&h=256&fit=crop",
     providerEmail: "farida@example.com",
   },
 ];
@@ -177,7 +189,7 @@ const users = [
     name: "Nusrat Jahan",
     email: "nusrat@example.com",
     role: "librarian",
-    photoUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=256&h=256&fit=crop",
+    photoUrl: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=256&h=256&fit=crop",
     passwordHash: bcrypt.hashSync("Password@123", 10),
   },
   {
@@ -193,7 +205,7 @@ const users = [
     name: "Rafiq Hasan",
     email: "rafiq@example.com",
     role: "librarian",
-    photoUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&h=256&fit=crop",
+    photoUrl: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=256&h=256&fit=crop",
     passwordHash: bcrypt.hashSync("Password@123", 10),
   },
   {
@@ -201,7 +213,7 @@ const users = [
     name: "Farida Akter",
     email: "farida@example.com",
     role: "librarian",
-    photoUrl: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=256&h=256&fit=crop",
+    photoUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=256&h=256&fit=crop",
     passwordHash: bcrypt.hashSync("Password@123", 10),
   },
   {
