@@ -4,7 +4,7 @@ const books = [
   {
     id: "moonlit-postcards",
     title: "Moonlit Postcards",
-    author: "Mina Hossain",
+    author: "Ayesha Rahman",
     category: "Fiction",
     coverImage: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1200&q=80",
     deliveryFee: 120,
@@ -17,7 +17,7 @@ const books = [
   {
     id: "harbor-of-echoes",
     title: "Harbor of Echoes",
-    author: "Farhan Noor",
+    author: "Ayesha Rahman",
     category: "Fiction",
     coverImage: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=1200&q=80",
     deliveryFee: 128,
@@ -30,7 +30,7 @@ const books = [
   {
     id: "signal-after-dawn",
     title: "Signal After Dawn",
-    author: "Farhan Noor",
+    author: "Rafiq Hasan",
     category: "Sci-Fi",
     coverImage: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1200&q=80",
     deliveryFee: 160,
@@ -43,7 +43,7 @@ const books = [
   {
     id: "orbit-classroom",
     title: "Orbit Classroom",
-    author: "Shadman Karim",
+    author: "Rafiq Hasan",
     category: "Sci-Fi",
     coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
     deliveryFee: 154,
