@@ -38,6 +38,7 @@ const books = [
     availability: "Available",
     provider: "Nayeem Khan",
     providerPhoto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&h=256&fit=crop",
+    authorPhoto: "/download.png",
     providerEmail: "nayeem@example.com",
   },
   {
@@ -51,6 +52,7 @@ const books = [
     availability: "Available",
     provider: "Nayeem Khan",
     providerPhoto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&h=256&fit=crop",
+    authorPhoto: "/download.png",
     providerEmail: "nayeem@example.com",
   },
   {
