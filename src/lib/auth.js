@@ -178,7 +178,7 @@ async function upsertGoogleUser(input) {
   return createUser({
     name: input.name,
     email: input.email,
-    role: "user",
+    role: input.role || "user",
     photoUrl: input.photoUrl || "",
     passwordHash: bcrypt.hashSync(crypto.randomUUID(), 10),
   });
@@ -221,6 +221,7 @@ function authCookieOptions() {
 function signOAuthState(payload) {
   const body = JSON.stringify({
     callbackURL: payload.callbackURL,
+    role: payload.role,
     ts: Date.now(),
   });
 
@@ -263,14 +264,14 @@ function verifyOAuthState(state) {
   return payload;
 }
 
-async function buildGoogleAuthUrl({ origin, callbackURL }) {
+async function buildGoogleAuthUrl({ origin, callbackURL, role }) {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
   if (!clientId) {
     return null;
   }
 
   const baseUrl = authBaseUrl() || origin;
-  const state = signOAuthState({ callbackURL });
+  const state = signOAuthState({ callbackURL, role });
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: `${baseUrl}/api/auth/google/callback`,

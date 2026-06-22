@@ -244,9 +244,9 @@ function createApp() {
   });
 
   app.post("/api/auth/google/start", async (req, res) => {
-    const { callbackURL = "/dashboard" } = req.body || {};
+    const { callbackURL = "/dashboard", role = "user" } = req.body || {};
     const origin = getRequestOrigin(req);
-    const url = await buildGoogleAuthUrl({ origin, callbackURL });
+    const url = await buildGoogleAuthUrl({ origin, callbackURL, role });
 
     if (!url) {
       return res.status(500).json({ message: "Google sign-in is not configured" });
@@ -288,6 +288,7 @@ function createApp() {
       email: profile.email,
       name: profile.name || profile.email.split("@")[0],
       photoUrl: profile.picture || "",
+      role: payload.role || "user",
     });
 
     const token = signAuthToken(user);
