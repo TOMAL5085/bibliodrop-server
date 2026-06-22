@@ -425,6 +425,60 @@ function createApp() {
     res.json({ data: transactions });
   });
 
+  app.get("/api/reviews", (_req, res) => {
+    res.json({ data: reviews });
+  });
+
+  app.post("/api/books", (req, res) => {
+    const { title, author, description = "", deliveryFee = 0, category = "Fiction", coverImage = "", provider = "Librarian", providerEmail } = req.body || {};
+    if (!title || !author || !providerEmail) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const crypto = require("node:crypto");
+    const newBook = {
+      id: `book_${crypto.randomUUID()}`,
+      title,
+      author,
+      description,
+      deliveryFee: Number(deliveryFee),
+      category,
+      coverImage: coverImage || "/covers/default.jpg",
+      status: "published",
+      availability: "Available",
+      provider,
+      providerEmail,
+      providerRole: "librarian",
+      providerAvatar: provider.charAt(0),
+      providerPhoto: "",
+      coverStart: "#0f172a",
+      coverEnd: "#334155",
+      addedAt: new Date().toISOString().slice(0, 10),
+      rating: 5,
+      reviews: 0,
+      deliveries: 0,
+      featured: false
+    };
+
+    books.push(newBook);
+    return res.status(201).json({ data: newBook });
+  });
+
+  app.put("/api/deliveries", (req, res) => {
+    const { id, status } = req.body || {};
+    if (!id || !status) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const delivery = deliveries.find((d) => d.id === id);
+    if (delivery) {
+      delivery.status = status;
+      return res.json({ data: delivery });
+    }
+
+    return res.status(404).json({ message: "Delivery not found" });
+  });
+
   app.use((req, res) => {
     res.status(404).json({ message: "Route not found" });
   });
