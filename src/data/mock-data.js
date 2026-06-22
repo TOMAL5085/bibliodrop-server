@@ -238,16 +238,122 @@ const deliveries = [
   },
 ];
 
-const reviews = [
-  {
-    id: "r1",
-    bookId: "moonlit-postcards",
-    userEmail: "rahim@example.com",
-    rating: 5,
-    comment: "Beautifully written and delivered early.",
-    verified: true,
-  },
+const reviewCountsByBookId = {
+  "moonlit-postcards": 128,
+  "harbor-of-echoes": 83,
+  "signal-after-dawn": 83,
+  "cloud-systems-primer": 94,
+  "quantitative-methods-lab": 47,
+  "founders-and-funnels": 51,
+  "market-moves": 37,
+  "river-of-empires": 71,
+  "chronicles-of-the-delta": 61,
+  "salt-in-the-margins": 55,
+  "quiet-weather": 8,
+  "orbit-classroom": 18,
+};
+
+const reviewNames = [
+  "Nusrat",
+  "Rafiq",
+  "Ayesha",
+  "Tanvir",
+  "Farida",
+  "Imran",
+  "Tania",
+  "Sadia",
+  "Mahir",
+  "Raisa",
+  "Shahriar",
+  "Nabila",
+  "Faria",
+  "Jannat",
+  "Asif",
+  "Nayem",
+  "Mou",
+  "Saimon",
+  "Ariya",
+  "Tahsin",
+  "Rifat",
+  "Shadman",
+  "Miftah",
+  "Nafisa",
+  "Tamim",
+  "Lamia",
 ];
+
+const reviewPhrases = {
+  Fiction: [
+    "Beautiful pacing and vivid character work.",
+    "It reads like a letter passed between neighborhoods.",
+    "The emotional beats land with real care.",
+    "A warm, memorable story that feels easy to return to.",
+  ],
+  "Sci-Fi": [
+    "The future feels grounded and easy to believe.",
+    "Big ideas land without losing the human thread.",
+    "Sharp concepts, clean structure, and a strong hook.",
+    "A clever story that keeps the momentum moving.",
+  ],
+  Academic: [
+    "Clear structure, useful examples, and easy revision.",
+    "Great for study sessions and quick refreshers.",
+    "The explanations stay practical from start to finish.",
+    "A solid pick when deadlines are getting close.",
+  ],
+  Business: [
+    "Practical frameworks I could apply immediately.",
+    "Short, sharp, and full of useful direction.",
+    "Good balance between strategy and execution.",
+    "The advice feels modern and easy to action.",
+  ],
+  History: [
+    "It balances memory, context, and detail really well.",
+    "The perspective feels rich and carefully researched.",
+    "A thoughtful look at how the past still shapes now.",
+    "Strong storytelling with a clear sense of place.",
+  ],
+  Poetry: [
+    "Every page feels intentional and quietly moving.",
+    "The imagery stays with you long after reading.",
+    "Compact lines, strong feeling, and a gentle rhythm.",
+    "A beautiful collection that rewards slow reading.",
+  ],
+  default: [
+    "A thoughtful read with a smooth delivery experience.",
+    "Well packed, well paced, and easy to recommend.",
+    "A dependable choice from this library shelf.",
+  ],
+};
+
+function formatReviewDate(offset) {
+  const base = new Date(Date.UTC(2026, 5, 20));
+  base.setUTCDate(base.getUTCDate() - offset);
+  return base.toISOString().slice(0, 10);
+}
+
+function makeReviewsForBook(book) {
+  const total = reviewCountsByBookId[book.id] ?? 0;
+  const phrases = reviewPhrases[book.category] ?? reviewPhrases.default;
+
+  return Array.from({ length: total }, (_, index) => {
+    const reviewer = reviewNames[(index + book.id.length) % reviewNames.length];
+    const comment = `${phrases[index % phrases.length]} ${reviewPhrases.default[index % reviewPhrases.default.length]}`;
+
+    return {
+      id: `review-${book.id}-${index + 1}`,
+      bookId: book.id,
+      user: reviewer,
+      userEmail: `${reviewer.toLowerCase()}.${book.id}.${index + 1}@example.com`,
+      rating: index % 11 === 0 ? 4 : 5,
+      comment,
+      date: formatReviewDate(index),
+      verified: true,
+    };
+  });
+}
+
+const reviews = books.flatMap((book) => makeReviewsForBook(book));
 
 const transactions = [
   {
