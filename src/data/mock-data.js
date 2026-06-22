@@ -82,7 +82,7 @@ const books = [
   {
     id: "founders-and-funnels",
     title: "Founders and Funnels",
-    author: "Tanjina Sultana",
+    author: "Tanvir Islam",
     category: "Business",
     coverImage: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
     deliveryFee: 140,
@@ -95,7 +95,7 @@ const books = [
   {
     id: "market-moves",
     title: "Market Moves",
-    author: "Miftah Chowdhury",
+    author: "Tanvir Islam",
     category: "Business",
     coverImage: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80",
     deliveryFee: 145,
