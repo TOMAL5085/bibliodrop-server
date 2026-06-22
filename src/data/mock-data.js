@@ -250,6 +250,30 @@ const deliveries = [
   },
 ];
 
+const transactions = [
+  {
+    id: "txn_01",
+    userEmail: "rahim@example.com",
+    librarianEmail: "ayesha@example.com",
+    amount: 120,
+    date: "2026-06-12",
+  },
+  {
+    id: "txn_02",
+    userEmail: "rahim@example.com",
+    librarianEmail: "nusrat@example.com",
+    amount: 110,
+    date: "2026-06-14",
+  },
+  {
+    id: "txn_03",
+    userEmail: "rahim@example.com",
+    librarianEmail: "rafiq@example.com",
+    amount: 115,
+    date: "2026-06-16",
+  },
+];
+
 const reviewCountsByBookId = {
   "moonlit-postcards": 128,
   "harbor-of-echoes": 83,
@@ -366,16 +390,6 @@ function makeReviewsForBook(book) {
 }
 
 const reviews = books.flatMap((book) => makeReviewsForBook(book));
-
-const transactions = [
-  {
-    id: "txn_01",
-    userEmail: "rahim@example.com",
-    librarianEmail: "ayesha@example.com",
-    amount: 120,
-    date: "2026-06-12",
-  },
-];
 
 module.exports = {
   books,
