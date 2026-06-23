@@ -40,32 +40,41 @@ function base64UrlDecode(input) {
 
 async function ensureMongo() {
   if (!mongoUri) {
+    console.warn("MONGODB_URI is not set. Using mock data.");
     return false;
   }
 
   if (!mongoPromise) {
     mongoPromise = mongoose.connect(mongoUri);
+    mongoPromise.catch((err) => {
+      console.error("MongoDB connection error:", err);
+      mongoPromise = null; // Allow retries
+    });
   }
 
-  await mongoPromise;
-  return true;
+  try {
+    await mongoPromise;
+    return true;
+  } catch (err) {
+    console.error("Failed to connect to MongoDB after retry:", err);
+    return false;
+  }
 }
 
 async function seedUsersCollection() {
   if (!(await ensureMongo())) {
-    return;
+    return; // Cannot seed if no MongoDB connection
   }
 
-  if ((await UserModel.countDocuments()) > 0) {
-    return;
+  const count = await UserModel.countDocuments();
+  if (count === 0) {
+    await UserModel.insertMany(
+      mockUsers.map((user) => ({
+        ...user,
+        emailLower: user.email.toLowerCase(),
+      }))
+    );
   }
-
-  await UserModel.insertMany(
-    mockUsers.map((user) => ({
-      ...user,
-      emailLower: user.email.toLowerCase(),
-    }))
-  );
 }
 
 function toPlainUser(user) {
@@ -112,12 +121,9 @@ async function findUserById(id) {
 }
 
 async function countUsers() {
-  await seedUsersCollection();
-
   if (await ensureMongo()) {
     return UserModel.countDocuments();
   }
-
   return mockUsers.length;
 }
 
