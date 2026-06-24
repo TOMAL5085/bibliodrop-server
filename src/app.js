@@ -4,11 +4,18 @@ const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const multer = require("multer");
 const {
-  books,
-  deliveries,
-  reviews,
-  transactions,
-} = require("./data/mock-data");
+  countBooks,
+  createBook,
+  createDeliveryRequest,
+  createReview,
+  findBookById,
+  listBooks,
+  listDeliveries,
+  listReviews,
+  listReviewsByBookId,
+  listTransactions,
+  updateDeliveryStatus,
+} = require("./lib/persistence");
 const {
   authCookieOptions,
   authBaseUrl,
@@ -115,67 +122,59 @@ function createApp() {
     res.json({ ok: true, service: "bibliodrop-api" });
   });
 
-  app.get("/api/books", (req, res) => {
-    const query = String(req.query.query || "").toLowerCase();
-    const category = String(req.query.category || "").toLowerCase();
-    const status = String(req.query.status || "").toLowerCase();
+  app.get("/api/books", async (req, res) => {
+    const filters = {
+      query: String(req.query.query || ""),
+      category: String(req.query.category || ""),
+      status: String(req.query.status || ""),
+    };
 
-    let result = books.filter((book) => book.status === "published");
-
-    if (query) {
-      result = result.filter((book) =>
-        [book.title, book.author, book.category].some((value) =>
-          value.toLowerCase().includes(query)
-        )
-      );
-    }
-
-    if (category) {
-      result = result.filter((book) => book.category.toLowerCase() === category);
-    }
-
-    if (status === "available") {
-      result = result.filter((book) => book.availability === "Available");
-    }
-
-    if (status === "checked out") {
-      result = result.filter((book) => book.availability === "Checked Out");
-    }
-
+    const result = await listBooks(filters);
     res.json({ data: result });
   });
 
-  app.get("/api/books/:id", (req, res) => {
-    const book = books.find((item) => item.id === req.params.id);
+  app.get("/api/books/:id", async (req, res) => {
+    const book = await findBookById(req.params.id);
     if (!book) {
       return res.status(404).json({ message: "Book not found" });
     }
-    return res.json({ data: book, reviews: reviews.filter((review) => review.bookId === book.id) });
+
+    const bookReviews = await listReviewsByBookId(book.id);
+    return res.json({ data: book, reviews: bookReviews });
   });
 
   app.get("/api/dashboard/:role", async (req, res) => {
     const { role } = req.params;
+    const allDeliveries = await listDeliveries();
+    const allBooks = await listBooks();
+    const allTransactions = await listTransactions();
+    const totalRevenue = allTransactions.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const deliveredCount = allDeliveries.filter((item) => item.status === "Delivered").length;
+    const pendingDeliveries = allDeliveries.filter((item) => item.status !== "Delivered").length;
 
     const response = {
       user: {
         stats: [
-          { label: "Total books read", value: 18 },
-          { label: "Pending deliveries", value: 2 },
-          { label: "Total spent", value: 1860 },
+          { label: "Total books read", value: deliveredCount },
+          { label: "Pending deliveries", value: pendingDeliveries },
+          {
+            label: "Total spent",
+            value: allDeliveries.reduce((sum, item) => sum + (item.amount || 0), 0),
+          },
         ],
       },
       librarian: {
         stats: [
-          { label: "Total books listed", value: 42 },
-          { label: "Total earnings", value: 28700 },
-          { label: "Active requests", value: 9 },
+          { label: "Total books listed", value: allBooks.length },
+          { label: "Total earnings", value: totalRevenue },
+          { label: "Active requests", value: pendingDeliveries },
         ],
       },
       admin: {
         stats: [
           { label: "Total users", value: await countUsers() },
-          { label: "Total books", value: books.length },
-          { label: "Total revenue", value: 86400 },
+          { label: "Total books", value: allBooks.length },
+          { label: "Total revenue", value: totalRevenue },
         ],
       },
     };
@@ -356,47 +355,36 @@ function createApp() {
     return res.json({ url });
   });
 
-  app.get("/api/deliveries", (_req, res) => {
-    res.json({ data: deliveries });
+  app.get("/api/deliveries", async (_req, res) => {
+    res.json({ data: await listDeliveries() });
   });
 
-  app.post("/api/deliveries/request", (req, res) => {
-    const { bookId, userEmail } = req.body;
-    const book = books.find((item) => item.id === bookId);
+  async function handleDeliveryRequest(req, res) {
+    const { bookId, userEmail } = req.body || {};
 
-    if (!book) {
+    if (!bookId || !userEmail) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const request = await createDeliveryRequest({ bookId, userEmail });
+    if (!request) {
       return res.status(404).json({ message: "Book not found" });
     }
 
-    const request = {
-      id: `d${deliveries.length + 1}`,
-      userEmail,
-      librarianEmail: book.providerEmail,
-      bookId,
-      status: "Pending",
-      amount: book.deliveryFee,
-      date: new Date().toISOString().slice(0, 10),
-    };
-
-    deliveries.push(request);
-    transactions.push({
-      id: `txn_${transactions.length + 1}`,
-      userEmail,
-      librarianEmail: book.providerEmail,
-      amount: book.deliveryFee,
-      date: request.date,
-    });
-
     return res.status(201).json({ data: request });
+  }
+
+  app.post("/api/deliveries/request", handleDeliveryRequest);
+  app.post("/api/deliveries", handleDeliveryRequest);
+
+  app.get("/api/reviews/:bookId", async (req, res) => {
+    res.json({ data: await listReviewsByBookId(req.params.bookId) });
   });
 
-  app.get("/api/reviews/:bookId", (req, res) => {
-    res.json({ data: reviews.filter((review) => review.bookId === req.params.bookId) });
-  });
-
-  app.post("/api/reviews", (req, res) => {
-    const { bookId, userEmail, rating, comment } = req.body;
-    const delivery = deliveries.find(
+  app.post("/api/reviews", async (req, res) => {
+    const { bookId, userEmail, rating, comment } = req.body || {};
+    const allDeliveries = await listDeliveries();
+    const delivery = allDeliveries.find(
       (item) => item.bookId === bookId && item.userEmail === userEmail && item.status === "Delivered"
     );
 
@@ -404,79 +392,65 @@ function createApp() {
       return res.status(403).json({ message: "Delivered order required before review" });
     }
 
-    const review = {
-      id: `r${reviews.length + 1}`,
-      bookId,
-      userEmail,
-      rating,
-      comment,
-      verified: true,
-    };
-
-    reviews.push(review);
+    const review = await createReview({ bookId, userEmail, rating, comment });
     return res.status(201).json({ data: review });
   });
 
-  app.get("/api/admin/approval-queue", (_req, res) => {
-    res.json({ data: books.filter((book) => book.status === "pending_approval") });
+  app.get("/api/admin/approval-queue", async (_req, res) => {
+    const pendingBooks = await listBooks({ status: "pending_approval" });
+    res.json({ data: pendingBooks });
   });
 
-  app.get("/api/transactions", (_req, res) => {
-    res.json({ data: transactions });
+  app.get("/api/transactions", async (_req, res) => {
+    res.json({ data: await listTransactions() });
   });
 
-  app.get("/api/reviews", (_req, res) => {
-    res.json({ data: reviews });
+  app.get("/api/reviews", async (_req, res) => {
+    res.json({ data: await listReviews() });
   });
 
-  app.post("/api/books", (req, res) => {
-    const { title, author, description = "", deliveryFee = 0, category = "Fiction", coverImage = "", provider = "Librarian", providerEmail } = req.body || {};
+  app.post("/api/books", async (req, res) => {
+    const {
+      title,
+      author,
+      description = "",
+      deliveryFee = 0,
+      category = "Fiction",
+      coverImage = "",
+      provider = "Librarian",
+      providerEmail,
+    } = req.body || {};
+
     if (!title || !author || !providerEmail) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const crypto = require("node:crypto");
-    const newBook = {
-      id: `book_${crypto.randomUUID()}`,
+    const newBook = await createBook({
       title,
       author,
       description,
-      deliveryFee: Number(deliveryFee),
+      deliveryFee,
       category,
-      coverImage: coverImage || "/covers/default.jpg",
-      status: "published",
-      availability: "Available",
+      coverImage,
       provider,
       providerEmail,
-      providerRole: "librarian",
-      providerAvatar: provider.charAt(0),
-      providerPhoto: "",
-      coverStart: "#0f172a",
-      coverEnd: "#334155",
-      addedAt: new Date().toISOString().slice(0, 10),
-      rating: 5,
-      reviews: 0,
-      deliveries: 0,
-      featured: false
-    };
+    });
 
-    books.push(newBook);
     return res.status(201).json({ data: newBook });
   });
 
-  app.put("/api/deliveries", (req, res) => {
+  app.put("/api/deliveries", async (req, res) => {
     const { id, status } = req.body || {};
     if (!id || !status) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const delivery = deliveries.find((d) => d.id === id);
-    if (delivery) {
-      delivery.status = status;
-      return res.json({ data: delivery });
+    const delivery = await updateDeliveryStatus(id, status);
+    if (!delivery) {
+      return res.status(404).json({ message: "Delivery not found" });
     }
 
-    return res.status(404).json({ message: "Delivery not found" });
+    return res.json({ data: delivery });
   });
 
   app.use((req, res) => {
